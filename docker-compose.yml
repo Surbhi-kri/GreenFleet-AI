@@ -14,5 +14,6 @@ services:
       - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
 
+
 volumes:
   postgres_data:
