@@ -2,21 +2,32 @@ package org.example;
 
 import org.example.cache.LRUCache;
 import org.example.db.DatabaseUtil;
+import org.example.db.datasource.PooledDataSourceFactory;
 import org.example.model.Graph;
 import org.example.model.RouteResult;
 import org.example.model.Vehicle;
 import org.example.service.RouteService;
 import org.example.strategy.*;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Scanner;
 
 public class App {
-    private static final RouteService   routeService  = new RouteService();
-    private static final LRUCache       cache         = new LRUCache(100);
+    // Pooling configured for route subsystem only
+    private static final DataSource routeDs =
+            PooledDataSourceFactory.createHikari(
+                    "jdbc:postgresql://localhost:5432/greenfleet",
+                    "greenfleet_user",
+                    "greenfleet_pass",
+                    5
+            );
+
+    private static final RouteService routeService = new RouteService(routeDs);
+    private static final LRUCache cache = new LRUCache(100);
     private static final RoutingContext routingContext =
             new RoutingContext(new EcoFriendlyStrategy());
-    private static final Scanner        scanner       = new Scanner(System.in);
+    private static final Scanner scanner = new Scanner(System.in);
     private static Graph graph = null;
 
     public static void main(String[] args) {
@@ -100,7 +111,7 @@ public class App {
 
             // run Dijkstra
             String cacheKey = from.toLowerCase() + "|" +
-                    to.toLowerCase()   + "|" +
+                    to.toLowerCase() + "|" +
                     routingContext.getStrategyName() + "|" +
                     vehicleId;
 
@@ -158,11 +169,11 @@ public class App {
         }
         System.out.println("  Strategy   : " + result.getAlgorithmUsed());
         System.out.println("  Path       : " + result.getPathString());
-        System.out.printf ("  Distance   : %.1f km%n",
+        System.out.printf("  Distance   : %.1f km%n",
                 result.getTotalDistanceKm());
-        System.out.printf ("  Fuel used  : %.2f L%n",
+        System.out.printf("  Fuel used  : %.2f L%n",
                 result.getTotalFuelL());
-        System.out.printf ("  CO2 emitted: %.2f kg%n",
+        System.out.printf("  CO2 emitted: %.2f kg%n",
                 result.getTotalEmissionKg());
         double totalMinutes = result.getTotalTime();
         long hours = (long) (totalMinutes / 60);
@@ -183,12 +194,18 @@ public class App {
 
     // ── Helpers ───────────────────────────────────────────────────────────
     private static int readInt() {
-        try { return Integer.parseInt(scanner.nextLine().trim()); }
-        catch (NumberFormatException e) { return -1; }
+        try {
+            return Integer.parseInt(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private static long readLong() {
-        try { return Long.parseLong(scanner.nextLine().trim()); }
-        catch (NumberFormatException e) { return -1; }
+        try {
+            return Long.parseLong(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 }
