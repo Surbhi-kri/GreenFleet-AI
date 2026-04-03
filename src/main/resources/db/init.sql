@@ -115,23 +115,3 @@ CREATE INDEX IF NOT EXISTS idx_trip_route         ON trip(route_id);
 CREATE INDEX IF NOT EXISTS idx_emission_trip      ON emission_log(trip_id);
 
 
--- ============================================================
--- SEED DATA (optional — useful for testing from day one)
--- ============================================================
-
-INSERT INTO company (company_name, industry)
-VALUES ('Tata Logistics', 'Logistics'),
-       ('GreenMove Corp', 'Transportation')
-    ON CONFLICT DO NOTHING;
-
-INSERT INTO vehicle (company_id, registration_no, vehicle_type, fuel_capacity_l, fuel_type)
-VALUES (1, 'MH12AB1234', 'truck',  80.0, 'diesel'),
-       (1, 'MH12CD5678', 'van',    50.0, 'petrol'),
-       (2, 'KA01EF9999', 'sedan',  45.0, 'electric')
-    ON CONFLICT DO NOTHING;
-
-INSERT INTO driver (company_id, full_name, license_no, email)
-VALUES (1, 'Ravi Kumar',   'DL-1234567', 'ravi@tatalogistics.com'),
-       (1, 'Priya Sharma', 'DL-7654321', 'priya@tatalogistics.com'),
-       (2, 'Amit Singh',   'DL-1122334', 'amit@greenmove.com')
-    ON CONFLICT DO NOTHING;
