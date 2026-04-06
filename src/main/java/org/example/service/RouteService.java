@@ -7,6 +7,8 @@ import org.example.model.Road;
 import org.example.model.RouteResult;
 import org.example.model.Vehicle;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -14,13 +16,21 @@ import java.util.List;
 
 public class RouteService {
     private final JDBCExecutor jdbc;
+    private final DataSource routeDataSource;
 
     public RouteService() {
         try {
             this.jdbc = new JDBCExecutor(DatabaseUtil.getConnection());
+            this.routeDataSource = null;
         } catch (SQLException e) {
             throw new RuntimeException("Failed to initialize RouteService DB executor", e);
         }
+    }
+
+    // Route subsystem constructor using DataSource (single-connection or pooled)
+    public RouteService(DataSource routeDataSource) {
+        this.routeDataSource = routeDataSource;
+        this.jdbc = null;
     }
 
     // Load entire road network from DB into a Graph object
@@ -59,7 +69,13 @@ public class RouteService {
 
     public Vehicle getVehicle(long vehicleId) throws SQLException {
         String sql = "SELECT * FROM vehicle WHERE vehicle_id = ?";
-        return mapVehicle(jdbc, sql, vehicleId);
+        if (routeDataSource == null) {
+            return mapVehicle(jdbc, sql, vehicleId);
+        }
+        try (Connection con = routeDataSource.getConnection()) {
+            JDBCExecutor executor = new JDBCExecutor(con);
+            return mapVehicle(executor, sql, vehicleId);
+        }
     }
 
     public void saveRoute(RouteResult result) throws SQLException {
@@ -73,19 +89,43 @@ public class RouteService {
         String from = result.getPath().get(0);
         String to = result.getPath().get(result.getPath().size() - 1);
 
-        jdbc.execute(sql,
-                from,
-                to,
-                result.getPathString(),
-                result.getTotalDistanceKm(),
-                result.getTotalFuelL(),
-                result.getTotalEmissionKg(),
-                result.getAlgorithmUsed());
+        if (routeDataSource == null) {
+            jdbc.execute(sql,
+                    from,
+                    to,
+                    result.getPathString(),
+                    result.getTotalDistanceKm(),
+                    result.getTotalFuelL(),
+                    result.getTotalEmissionKg(),
+                    result.getAlgorithmUsed());
+            return;
+        }
+
+        try (Connection con = routeDataSource.getConnection()) {
+            JDBCExecutor executor = new JDBCExecutor(con);
+            executor.execute(sql,
+                    from,
+                    to,
+                    result.getPathString(),
+                    result.getTotalDistanceKm(),
+                    result.getTotalFuelL(),
+                    result.getTotalEmissionKg(),
+                    result.getAlgorithmUsed());
+        }
     }
 
     public void printAllRoutes() throws SQLException {
         String sql = "SELECT * FROM route ORDER BY calculated_at DESC";
-        List<String> lines = mapRouteLines(jdbc, sql);
+        List<String> lines;
+
+        if (routeDataSource == null) {
+            lines = mapRouteLines(jdbc, sql);
+        } else {
+            try (Connection con = routeDataSource.getConnection()) {
+                JDBCExecutor executor = new JDBCExecutor(con);
+                lines = mapRouteLines(executor, sql);
+            }
+        }
 
         if (lines.isEmpty()) {
             System.out.println("  No routes saved yet.");
