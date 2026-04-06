@@ -6,19 +6,46 @@ CREATE TABLE IF NOT EXISTS company (
     created_at   TIMESTAMP    NOT NULL DEFAULT NOW()
     );
 
+-- ============================================================
 
--- ─── 2. vehicle ─────────────────────────────────────────────
--- ONE company owns MANY vehicles  →  One-to-Many
 CREATE TABLE IF NOT EXISTS vehicle (
-                                       vehicle_id       BIGSERIAL    PRIMARY KEY,
-                                       company_id       BIGINT       NOT NULL
-                                       REFERENCES company(company_id)
-    ON DELETE CASCADE,
-    registration_no  VARCHAR(50)  NOT NULL UNIQUE,
-    vehicle_type     VARCHAR(50)  NOT NULL,
-    fuel_capacity_l  NUMERIC(6,2) NOT NULL,
-    fuel_type        VARCHAR(30)  NOT NULL
+                                       vehicle_id           BIGSERIAL    PRIMARY KEY,
+                                       company_id           BIGINT       NOT NULL REFERENCES company(company_id) ON DELETE CASCADE,
+    registration_no      VARCHAR(50)  NOT NULL UNIQUE,
+    vehicle_type         VARCHAR(50)  NOT NULL,
+    fuel_efficiency_kmpl NUMERIC(5,2) NOT NULL,
+    fuel_type            VARCHAR(30)  NOT NULL
     );
+
+CREATE TABLE IF NOT EXISTS road (
+                                    road_id        BIGSERIAL    PRIMARY KEY,
+                                    from_city      VARCHAR(100) NOT NULL,
+    to_city        VARCHAR(100) NOT NULL,
+    distance_km    NUMERIC(8,2) NOT NULL,
+    road_type      VARCHAR(20)  NOT NULL,
+    traffic_level  VARCHAR(10)  NOT NULL,
+    speed_limit    INT          NOT NULL
+    );
+
+CREATE TABLE IF NOT EXISTS route (
+                                     route_id       BIGSERIAL    PRIMARY KEY,
+                                     from_city      VARCHAR(100) NOT NULL,
+    to_city        VARCHAR(100) NOT NULL,
+    path           TEXT         NOT NULL,
+    total_distance NUMERIC(8,2) NOT NULL,
+    total_fuel_l   NUMERIC(8,2) NOT NULL,
+    total_emission NUMERIC(8,3) NOT NULL,
+    algorithm_used VARCHAR(30)  NOT NULL,
+    calculated_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+    );
+
+-- ── Indexes ───────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_road_cities   ON road(from_city, to_city);
+CREATE INDEX IF NOT EXISTS idx_route_cities  ON route(from_city, to_city);
+
+
+
+
 
 
 -- ─── 3. driver ──────────────────────────────────────────────
@@ -54,16 +81,6 @@ CREATE TABLE IF NOT EXISTS vehicle_assignment (
     );
 
 
--- ─── 5. route ───────────────────────────────────────────────
--- Stores computed routes (output of Strategy Pattern)
-CREATE TABLE IF NOT EXISTS route (
-                                     route_id               BIGSERIAL     PRIMARY KEY,
-                                     origin                 VARCHAR(255)  NOT NULL,
-    destination            VARCHAR(255)  NOT NULL,
-    distance_km            NUMERIC(8,2)  NOT NULL,
-    estimated_emission_kg  NUMERIC(8,3)  NOT NULL,
-    algorithm_used         VARCHAR(50)   NOT NULL
-    );
 
 
 -- ─── 6. trip ────────────────────────────────────────────────
